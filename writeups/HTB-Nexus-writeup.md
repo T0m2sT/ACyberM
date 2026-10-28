@@ -1,4 +1,4 @@
-# HTB: Nexus — Writeup
+# HTB: Nexus - Writeup
 
 **Difficulty:** Hard (multi-stage: web recon → vhost enum → OSINT → CVE RCE → systemd-timer privesc)
 **OS:** Linux
@@ -17,7 +17,7 @@ Results:
 |_http-title: Did not follow redirect to http://nexus.htb/
 ```
 
-Port 80 redirects to a hostname, not the IP — the browser can't resolve `nexus.htb` on its own. Fix:
+Port 80 redirects to a hostname, not the IP - the browser can't resolve `nexus.htb` on its own. Fix:
 
 ```bash
 echo "10.129.234.54 nexus.htb" | sudo tee -a /etc/hosts
@@ -48,7 +48,7 @@ Added both to `/etc/hosts`.
 
 `billing.nexus.htb` redirected to `/admin/login` and its cookies (`krayin_crm_session`) identified it as **Krayin CRM**.
 
-## Gitea enumeration — public repo discovery
+## Gitea enumeration - public repo discovery
 
 Gitea (`git.nexus.htb`) exposed an unauthenticated REST API. Listed public repos:
 
@@ -77,11 +77,11 @@ git log -p --all
 + DB_PASSWORD=
 ```
 
-**Lesson:** secrets removed in a later commit are still recoverable from git history unless the repo is rewritten (`git filter-repo`/BFG) — a very common real-world leak.
+**Lesson:** secrets removed in a later commit are still recoverable from git history unless the repo is rewritten (`git filter-repo`/BFG) - a very common real-world leak.
 
 This DB password alone did not work as the Krayin admin login.
 
-## OSINT — finding a real username
+## OSINT - finding a real username
 
 A careers/job-listing page on the site leaked a real staff email in first-initial.lastname format:
 
@@ -90,7 +90,7 @@ Apply at careers@nexus.htb
 Hiring manager: j.matthew@nexus.htb
 ```
 
-## Foothold — Krayin CRM admin login
+## Foothold - Krayin CRM admin login
 
 Combined the OSINT username with the DB password found in git history (again, password reuse):
 
@@ -112,11 +112,11 @@ Laravel Version: 12.54.1
 
 Combined with the CVE research below, the running app was identified as **Krayin CRM v2.2.x**.
 
-## CVE-2026-38526 — Authenticated RCE via TinyMCE upload
+## CVE-2026-38526 - Authenticated RCE via TinyMCE upload
 
 Researched the version against known CVEs:
 
-- **CVE-2026-38526** — Webkul Krayin CRM v2.2.x, CVSS 9.9. Unrestricted file upload (CWE-434) at `/admin/tinymce/upload`: the endpoint doesn't validate real file content, only trusts client-supplied metadata.
+- **CVE-2026-38526** - Webkul Krayin CRM v2.2.x, CVSS 9.9. Unrestricted file upload (CWE-434) at `/admin/tinymce/upload`: the endpoint doesn't validate real file content, only trusts client-supplied metadata.
 
 ### Finding the real request shape
 
@@ -155,7 +155,7 @@ curl -s "http://billing.nexus.htb/storage/tinymce/a03515a65e8f935bfa360700f93866
 
 RCE confirmed as `www-data`.
 
-## Post-exploitation — finding jones' password
+## Post-exploitation - finding jones' password
 
 Confirmed `jones` was a real system account:
 ```bash
@@ -168,7 +168,7 @@ cat /var/www/krayin/.env
 # DB_PASSWORD=y27xb3ha!!74GbR
 ```
 
-Password reuse again — this worked for SSH as `jones`:
+Password reuse again - this worked for SSH as `jones`:
 ```bash
 ssh jones@<TARGET_IP>
 # password: y27xb3ha!!74GbR
@@ -176,7 +176,7 @@ ssh jones@<TARGET_IP>
 
 Same credential also worked for Gitea login as `jones`.
 
-## Privilege escalation — systemd timer + Gitea template sync
+## Privilege escalation - systemd timer + Gitea template sync
 
 Enumerated scheduled jobs:
 ```bash
@@ -210,7 +210,7 @@ target = os.path.join(STAGING_DIR, owner, name, filepath)
 # STAGING_DIR = /home/git/template-staging
 ```
 
-**Vulnerability:** `filepath` comes straight from `git ls-tree` output with zero sanitization. If a git tree entry contains a path with `../`, the write escapes the staging directory — arbitrary file write as root.
+**Vulnerability:** `filepath` comes straight from `git ls-tree` output with zero sanitization. If a git tree entry contains a path with `../`, the write escapes the staging directory - arbitrary file write as root.
 
 ### Building the path-traversal payload
 
@@ -302,10 +302,10 @@ Root achieved via `bash -p` (effective UID 0 because `/bin/bash` now has the SUI
 ## Lessons for teaching
 
 - **vhost enumeration matters**: `gobuster vhost` found two subdomains a plain port scan never would have.
-- **Git history never truly "removes" a secret** — always assume anything ever committed is retrievable unless the repo was rewritten and force-pushed/GC'd.
-- **OSINT from a normal marketing/careers page** can hand you a real username format — always check "About"/careers pages during recon.
-- **`APP_DEBUG=true` in production is a real, common misconfiguration** that leaks full stack traces, versions, and file paths — a reliable fingerprinting method when present.
-- **Password reuse across FTP/SSH/CRM/Gitea** was the connective tissue of the entire chain — this is extremely realistic; humans reuse passwords across services constantly.
+- **Git history never truly "removes" a secret** - always assume anything ever committed is retrievable unless the repo was rewritten and force-pushed/GC'd.
+- **OSINT from a normal marketing/careers page** can hand you a real username format - always check "About"/careers pages during recon.
+- **`APP_DEBUG=true` in production is a real, common misconfiguration** that leaks full stack traces, versions, and file paths - a reliable fingerprinting method when present.
+- **Password reuse across FTP/SSH/CRM/Gitea** was the connective tissue of the entire chain - this is extremely realistic; humans reuse passwords across services constantly.
 - **CVE hunting workflow**: version fingerprint → search "\<product\> \<version\> CVE" → check for public PoCs before building your own from scratch, but understanding the underlying bug class (unrestricted file upload, CWE-434) matters more than the PoC script itself.
-- **Blind trust in data from a "trusted" internal source (git tree entries) is dangerous** — `template-sync.py`'s core bug is treating filenames pulled from a repository as safe without validating them, a classic path traversal / unsanitized input pattern applicable far beyond git.
-- **systemd timers are the modern cron** — `systemctl list-timers --all` should be a standard step in any Linux privesc enumeration checklist, not just `crontab -l` and `/etc/cron.d`.
+- **Blind trust in data from a "trusted" internal source (git tree entries) is dangerous** - `template-sync.py`'s core bug is treating filenames pulled from a repository as safe without validating them, a classic path traversal / unsanitized input pattern applicable far beyond git.
+- **systemd timers are the modern cron** - `systemctl list-timers --all` should be a standard step in any Linux privesc enumeration checklist, not just `crontab -l` and `/etc/cron.d`.
