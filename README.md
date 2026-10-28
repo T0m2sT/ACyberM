@@ -7,7 +7,7 @@ CTF / Hack The Box writeups.
 | Challenge | Difficulty | Link | Writeup |
 |---|---|---|---|
 | Cap | Easy | [HTB machine](https://app.hackthebox.com/machines/Cap) | [writeups/HTB-Cap-writeup.md](writeups/HTB-Cap-writeup.md) |
-| Nexus | Hard | [HTB machine](https://app.hackthebox.com/machines/Nexus) | [writeups/HTB-Nexus-writeup.md](writeups/HTB-Nexus-writeup.md) |
+| Nexus | Easy | [HTB machine](https://app.hackthebox.com/machines/Nexus) | [writeups/HTB-Nexus-writeup.md](writeups/HTB-Nexus-writeup.md) |
 
 ## Hints
 
