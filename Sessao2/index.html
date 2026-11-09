@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ACM Web Lab</title>
+
+  <style>
+    body {
+      font-family: system-ui;
+      background: #0d1525;
+      color: #eaf2f7;
+      margin: 0;
+      padding: 40px;
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 820px;
+      margin: auto;
+    }
+
+    .panel {
+      border: 1px solid #33495e;
+      border-radius: 14px;
+      padding: 20px;
+      margin: 18px 0;
+      background: #17263a;
+    }
+
+    button {
+      background: #23c7bc;
+      color: #071620;
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .muted {
+      color: #a1bac9;
+    }
+
+    /* Escondido por defeito; o JavaScript mostra-o se role === 'admin' */
+    .hidden-note {
+      display: none;
+    }
+
+    code {
+      color: #8ce3dd;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <h1>ACM FEUP · Web Lab</h1>
+    <p class="muted">Laboratório intencionalmente simples, para uso local e autorizado.</p>
+
+    <!-- FLAG{HTML} -->
+
+    <!-- ===================== DESAFIO 1 ===================== -->
+    <section class="panel">
+      <h2>Desafio 1 — Inspeciona</h2>
+      <p>Consegues encontrar um segredo no HTML? Experimenta também modificar este título no DevTools.</p>
+    </section>
+
+    <!-- ===================== DESAFIO 2 ===================== -->
+    <section class="panel">
+      <h2>Desafio 2 — Observa o pedido</h2>
+      <p>Clica e procura o pedido no separador Network.</p>
+      <button id="api">Pedir dados da API</button>
+      <p id="api-out" class="muted">Ainda sem resposta.</p>
+    </section>
+
+    <!-- ===================== DESAFIO 3 ===================== -->
+    <section class="panel">
+      <h2>Desafio 3 — Trust issues</h2>
+      <p>Esta interface (deliberadamente insegura) usa <code>localStorage.role</code> para decidir o que mostrar.</p>
+      <p>Role atual: <strong id="role">?</strong></p>
+      <button id="update">Atualizar painel</button>
+
+      <p id="admin" class="hidden-note">
+        Área de administração fictícia: <strong>FLAG{Local_Storage}</strong>
+      </p>
+
+      <p class="muted">
+        Importante: isto não atribui privilégios num servidor. Mostra apenas uma falha de confiança na interface.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // Na primeira visita, guarda role = 'user' no localStorage do browser
+    if (!localStorage.getItem('role')) {
+      localStorage.setItem('role', 'user');
+    }
+
+    // Lê o role do localStorage e mostra/esconde a área de admin
+    function refresh() {
+      let role = localStorage.getItem('role') || 'user';
+      document.querySelector('#role').textContent = role;
+      document.querySelector('#admin').style.display = role === 'admin' ? 'block' : 'none';
+    }
+
+    // Botão "Atualizar painel" volta a ler o localStorage
+    document.querySelector('#update').addEventListener('click', refresh);
+
+    // Botão "Pedir dados da API" faz um pedido GET a api.json
+    document.querySelector('#api').addEventListener('click', async () => {
+      try {
+        let r = await fetch('api.json');
+        let d = await r.json(); // o conteúdo (com a flag) NÃO é mostrado na página
+        document.querySelector('#api-out').textContent =
+          'Resposta recebida. Procura no Network → Response (status ' + r.status + ').';
+      } catch (e) {
+        document.querySelector('#api-out').textContent =
+          'Erro: usa um servidor local (python3 -m http.server 8000), não file://';
+      }
+    });
+
+    // Corre uma vez ao carregar a página
+    refresh();
+  </script>
+</body>
+</html>
